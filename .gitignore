@@ -3,3 +3,8 @@ __pycache__/
 .streamlit/secrets.toml 
 *.db 
 .env 
+
+# FAISS 산출물
+faiss_index.index
+faiss_meta.json
+backup_faiss/
