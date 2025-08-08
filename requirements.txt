@@ -1,0 +1,12 @@
+openai
+langchain-community
+plotly
+pandas
+openpyxl
+tiktoken
+langchain
+streamlit
+numpy==1.26.4
+scikit-learn
+pytz>=2023.3
+faiss-cpu
