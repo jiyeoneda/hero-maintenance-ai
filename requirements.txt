@@ -9,4 +9,4 @@ streamlit
 numpy==1.26.4
 scikit-learn
 pytz>=2023.3
-faiss-cpu
+faiss-cpu==1.7.4
