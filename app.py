@@ -54,7 +54,12 @@ def init_database():
 
     default_accounts = [
         ('admin123', 'admin123!@#', 'admin', '김철수', '010-1234-5678', 'IT부서'),
-        ('maintainer123', 'maintainer123!@#', 'maintainer', '이영희', '010-9876-5432', '정비팀')
+        ('etch123', 'etch123!@#', 'maintainer', '이영희', '010-2222-2222', 'Etch팀'),
+        ('photo123', 'photo123!@#', 'maintainer', '삼영희', '010-3333-3333', 'Photo팀'),
+        ('diff123', 'diff123!@#', 'maintainer', '사영희', '010-4444-4444', 'Diffusion팀'),
+        ('thin123', 'thin123!@#', 'maintainer', '오영희', '010-5555-5555', 'Thin Film팀'),
+        ('cc123', 'cc123!@#', 'maintainer', '육영희', '010-6666-6666', 'C&C팀'),
+        ('yield123', 'yield123!@#', 'maintainer', '칠영희', '010-7777-7777', '수율팀')
     ]
     for username, password, role, name, contact, department in default_accounts:
         cursor.execute('''
@@ -168,13 +173,18 @@ if not st.session_state.logged_in:
             <div style="background-color: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
                 <h4 style="color: #1976d2; margin: 0;">💡 테스트 계정 안내</h4>
                 <p style="margin: 10px 0 5px 0; color: #424242;"><strong>관리자:</strong> admin123 / admin123!@#</p>
-                <p style="margin: 0; color: #424242;"><strong>정비자:</strong> maintainer123 / maintainer123!@#</p>
+                <p style="margin: 10px 0 5px 0; color: #424242;"><strong>Etch:</strong> etch123 / etch123!@#</p>
+                <p style="margin: 10px 0 5px 0; color: #424242;"><strong>Photo:</strong> photo123 / photo123!@#</p>
+                <p style="margin: 10px 0 5px 0; color: #424242;"><strong>Diffusion:</strong> diff123 / diff123!@#</p>
+                <p style="margin: 10px 0 5px 0; color: #424242;"><strong>Thin Film:</strong> thin123 / thin123!@#</p>
+                <p style="margin: 10px 0 5px 0; color: #424242;"><strong>C&C:</strong> cc123 / cc123!@#</p>
+                <p style="margin: 0; color: #424242;"><strong>수율:</strong> yield123 / yield123!@#</p>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
         with st.form("login_form"):
-            role_option = st.selectbox("👥 역할 선택", ["관리자", "정비자"], key="role_select")
+            role_option = st.selectbox("👥 부서 선택", ["관리자", "Etch", "Photo", "Diffusion", "Thin Film", "C&C", "수율"], key="role_select")
             username = st.text_input("👤 아이디", placeholder="아이디를 입력하세요")
             password = st.text_input("🔒 비밀번호", type="password", placeholder="비밀번호를 입력하세요")
             submitted = st.form_submit_button("🚀 로그인", use_container_width=True)
@@ -182,8 +192,19 @@ if not st.session_state.logged_in:
             if submitted:
                 user_role = authenticate_user(username, password)
                 if user_role:
-                    role_mapping = {"관리자": "admin", "정비자": "maintainer"}
-                    if user_role == role_mapping[role_option] or user_role == "admin":
+                    # 부서별 계정 매핑 확인
+                    department_mapping = {
+                        "관리자": ["admin123"],
+                        "Etch": ["etch123"],
+                        "Photo": ["photo123"],
+                        "Diffusion": ["diff123"],
+                        "Thin Film": ["thin123"],
+                        "C&C": ["cc123"],
+                        "수율": ["yield123"]
+                    }
+                    
+                    # 관리자는 모든 부서 선택 가능, 그 외는 해당 부서만 가능
+                    if user_role == "admin" or (role_option in department_mapping and username in department_mapping[role_option]):
                         # OPENAI KEY: secrets 우선, 없으면 env
                         st.session_state.api_key = st.secrets.get("OPENAI_API_KEY") if "OPENAI_API_KEY" in st.secrets else os.getenv("OPENAI_API_KEY")
                         if not st.session_state.api_key:
@@ -193,10 +214,11 @@ if not st.session_state.logged_in:
                         st.session_state.logged_in = True
                         st.session_state.username = username
                         st.session_state.user_role = user_role
+                        st.session_state.selected_department = role_option
                         st.success(f"✅ {username}님, 환영합니다! ({role_option})")
                         st.rerun()
                     else:
-                        st.error("❌ 선택한 역할과 계정 권한이 일치하지 않습니다.")
+                        st.error("❌ 선택한 부서와 계정 권한이 일치하지 않습니다.")
                 else:
                     st.error("❌ 아이디 또는 비밀번호가 올바르지 않습니다.")
     st.stop()
@@ -234,13 +256,20 @@ else:
 # =========================
 with st.sidebar:
     name, contact, dept, role = get_user_profile(st.session_state.username)
-    role_display = {'admin': '시스템 관리자', 'maintainer': '정비 담당자'}.get(st.session_state.user_role, st.session_state.user_role)
+    role_display = {
+        'admin': '시스템 관리자', 
+        'maintainer': '정비 담당자'
+    }.get(st.session_state.user_role, st.session_state.user_role)
+    
+    # 선택된 부서 표시
+    selected_dept = st.session_state.get('selected_department', dept)
+    
     st.markdown(f"""
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; padding:20px; border-radius:10px; margin:10px 0;">
         <h4 style="margin:0;">👋 환영합니다!</h4>
         <p style="margin:8px 0 0 0;"><b>{name if name else st.session_state.username}</b></p>
         <p style="margin:4px 0 0 0;">📋 {role_display}</p>
-        {f'<p style="margin:4px 0 0 0;">🏢 {dept}</p>' if dept else ''}
+        <p style="margin:4px 0 0 0;">🏢 {selected_dept if selected_dept else dept}</p>
         {f'<p style="margin:4px 0 0 0;">📱 {contact}</p>' if contact else ''}
     </div>
     """, unsafe_allow_html=True)
@@ -271,34 +300,106 @@ with st.sidebar:
         st.rerun()
 
 # =========================
-# 5) 파일 업로드
+# 5) 파일 업로드 및 데이터 로드
 # =========================
-st.markdown("### 📁 데이터 업로드")
 
-col1, col2 = st.columns([2, 1])
+# 파일 저장을 위한 디렉토리 설정 및 생성
+UPLOAD_DIR = "uploaded_data"
+if not os.path.exists(UPLOAD_DIR):
+    os.makedirs(UPLOAD_DIR)
 
+# 역할과 사용자에 따라 불러올 수 있는 파일 목록을 가져오는 함수
+def get_available_files(role, username):
+    """
+    사용자의 역할에 따라 접근 가능한 파일 목록을 반환합니다.
+    - admin: 'admin_'으로 시작하는 모든 파일을 볼 수 있습니다.
+    - maintainer: 'maintainer_[본인username]_'으로 시작하는 파일만 볼 수 있습니다.
+    """
+    files = []
+    # 디렉토리 내의 모든 파일 목록을 가져옴
+    all_files = os.listdir(UPLOAD_DIR)
+    
+    if role == 'admin':
+        # 관리자는 'admin_'으로 시작하는 모든 파일을 필터링
+        for filename in all_files:
+            if filename.startswith("admin_") and filename.endswith(".xlsx"):
+                files.append(filename)
+    else:  # maintainer
+        # 정비자는 'maintainer_[본인username]_'으로 시작하는 파일을 필터링
+        prefix = f"maintainer_{username}_"
+        for filename in all_files:
+            if filename.startswith(prefix) and filename.endswith(".xlsx"):
+                files.append(filename)
+    
+    return files
+
+st.markdown("### 📁 데이터 로드 및 업로드")
+
+# 현재 로그인한 사용자 정보 가져오기
+username = st.session_state.username
+role = st.session_state.user_role
+
+# 파일 객체를 담을 변수 초기화
+loaded_file_data = None 
+
+# UI를 두 개의 열로 나눔
+col1, col2 = st.columns(2)
+
+# --- 왼쪽 열: 파일 업로드 ---
 with col1:
+    st.subheader("새 파일 업로드")
     uploaded_file = st.file_uploader(
-        "엑셀 파일을 업로드하세요 (.xlsx)", 
+        "엑셀 파일을 업로드하세요 (.xlsx)",
         type=["xlsx"],
-        help="정비노트가 포함된 엑셀 파일을 업로드하세요"
+        key="file_uploader_widget"
+    )
+    if uploaded_file is not None:
+        # 파일 저장 로직
+        safe_filename = re.sub(r'[\\/*?:"<>|]', "", uploaded_file.name)
+        save_filename = f"{role}_{username}_{safe_filename}"
+        save_path = os.path.join(UPLOAD_DIR, save_filename)
+        
+        if not os.path.exists(save_path):
+            with open(save_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            
+            st.success(f"✅ 파일 '{save_filename}'이(가) 서버에 저장되었습니다. 페이지가 새로고침됩니다.")
+            st.rerun()
+        else:
+            st.warning("이미 같은 이름의 파일이 존재합니다. 다른 이름을 사용해주세요.")
+            loaded_file_data = uploaded_file
+
+# --- 오른쪽 열: 저장된 파일 불러오기 ---
+with col2:
+    st.subheader("저장된 파일 불러오기")
+    available_files = get_available_files(role, username)
+    options = ["--- 파일을 선택하세요 ---"] + sorted(available_files)
+    selected_option = st.selectbox(
+        "불러올 파일을 선택하세요.",
+        options,
+        index=0,
+        help="관리자는 모든 관리자 파일을, 정비자는 본인의 파일만 볼 수 있습니다.",
+        key="file_selector_widget"
     )
 
-with col2:
-    if uploaded_file:
-        st.success("✅ 파일 업로드 완료")
-    else:
-        st.info("📤 파일을 선택해주세요")
+    if selected_option != "--- 파일을 선택하세요 ---":
+        file_path = os.path.join(UPLOAD_DIR, selected_option)
+        try:
+            loaded_file_data = open(file_path, "rb")
+            st.info(f"💾 저장된 파일 '{selected_option}'을(를) 불러왔습니다.")
+        except FileNotFoundError:
+            st.error("파일을 찾을 수 없습니다. 삭제되었을 수 있습니다.")
+            loaded_file_data = None
 
-if uploaded_file is None:
+# 데이터 처리 로직은 loaded_file_data를 사용하도록 통일
+if loaded_file_data is None:
     st.markdown("""
     <div style="background-color: #e3f2fd; padding: 30px; border-radius: 10px; text-align: center; margin: 30px 0;">
         <h3 style="color: #1976d2; margin-bottom: 15px;">📋 사용 방법</h3>
         <p style="color: #424242; font-size: 16px; line-height: 1.6;">
-            1. 정비 데이터가 포함된 엑셀 파일을 업로드하세요<br>
-            2. HERO가 데이터를 분석하여 인사이트를 제공합니다<br>
-            3. 챗봇을 통해 정비 문제 해결책을 찾아보세요<br>
-            4. 정비노트 작성 도우미를 활용해보세요
+            1. 왼쪽에 있는 <b>'새 파일 업로드'</b>를 통해 정비 데이터를 업로드 하거나,<br>
+            2. 오른쪽에 있는 목록에서 이전에 업로드한 파일을 선택하세요.<br>
+            3. HERO가 데이터를 분석하여 인사이트를 제공합니다.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -306,13 +407,16 @@ if uploaded_file is None:
 
 # 데이터 로딩 및 전처리
 with st.spinner("📊 데이터를 분석하고 있습니다..."):
-    df = pd.read_excel(uploaded_file)
+    df = pd.read_excel(loaded_file_data)
+    
+    if hasattr(loaded_file_data, 'close'):
+        loaded_file_data.close()
+
     if '정비일자' in df.columns:
         df['정비일자'] = pd.to_datetime(df['정비일자'], errors='coerce')
     
     df = df.dropna(subset=['정비노트'])
     
-    # 성공 메트릭 표시
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -355,8 +459,6 @@ with st.spinner("📊 데이터를 분석하고 있습니다..."):
         """, unsafe_allow_html=True)
 
 st.divider()
-
-    
 
 # =========================
 # 6) 공용: 문제원인 추출(단일화, 전역 1회만 계산)

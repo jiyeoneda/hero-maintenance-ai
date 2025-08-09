@@ -9,4 +9,4 @@ streamlit
 numpy==1.26.4        # faiss 1.7.4와 호환
 scikit-learn
 pytz>=2023.3
-faiss-cpu==1.7.4     # 모듈명은 faiss로 import됨
+faiss-cpu==1.7.4
